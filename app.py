@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template, url_for, redirect
 import sqlite3
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 
@@ -24,22 +25,62 @@ def init_db():
 
 init_db()
 
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = sqlite3.connect('example.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user[2], password):
+            session['user_id'] = user[0]
+            session['username'] = user[1]
+            flash('Login successful!', 'success')
+            return redirect(url_for('profile', username=username))
+        else:
+            flash('Invalid username or password', 'danger')
+
+    return render_template('sign-in.html')
+
 @app.route('/user')
 def get_user():
     username = request.args.get('username')
     conn = sqlite3.connect('example.db')
     c = conn.cursor()
-    
-    # Vulnerabilidad de SQL Injection
-    query = f"SELECT * FROM users WHERE username = '{username}'"
-    print(f"Executing query: {query}")
-    c.execute(query)
-    
+
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
     user = c.fetchone()
     conn.close()
-    
+
     if user:
-        return jsonify({'id': user[0], 'username': user[1], 'email': user[3], 'role': user[4]})
+        user_data = {'id': user[0], 'username': user[1], 'email': user[3], 'role': user[4]}
+        return jsonify(user_data)
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/profile')
+def profile():
+    username = request.args.get('username')
+    message = request.args.get('message', '')
+    conn = sqlite3.connect('example.db')
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    conn.close()
+
+    if user:
+        user_data = {'username': user[1], 'email': user[3], 'role': user[4]}
+        return render_template('user_profile.html', user=user_data, message=message)
     else:
         return jsonify({'error': 'User not found'}), 404
 
@@ -48,39 +89,14 @@ def reset_password():
     email = request.form.get('email')
     conn = sqlite3.connect('example.db')
     c = conn.cursor()
-    
-    # Vulnerabilidad de autenticación defectuosa
+
     c.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = c.fetchone()
-    
+
     if user:
-        # Enviaríamos el token al email del atacante
         return jsonify({'message': f'Recovery email sent to {email}'}), 200
     else:
         return jsonify({'error': 'Email not found'}), 404
-
-@app.route('/profile')
-def profile():
-    username = request.args.get('username')
-    conn = sqlite3.connect('example.db')
-    c = conn.cursor()
-    
-    # Supongamos que obtenemos el perfil del usuario y lo mostramos sin sanitizar
-    c.execute("SELECT * FROM users WHERE username = ?", (username,))
-    user = c.fetchone()
-    conn.close()
-    
-    if user:
-        profile_template = f"""
-            <h1>Profile of {user[1]}</h1>
-            <p>Email: {user[3]}</p>
-            <p>Role: {user[4]}</p>
-            <p>Message: {request.args.get('message')}</p>
-        """
-        return render_template_string(profile_template)
-    else:
-        return jsonify({'error': 'User not found'}), 404
-
 
 if __name__ == '__main__':
     app.run(debug=True)
