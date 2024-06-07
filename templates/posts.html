@@ -2,7 +2,9 @@
 content %}
 <h1>Blog Posts</h1>
 <div class="list-group">
-  {% if request.args.get('role') == 'admin' %}
+  {% if error %}
+  <div class="alert alert-danger" role="alert">Error: {{ error }}</div>
+  {% endif %} {% if request.args.get('role') == 'admin' %}
   <form method="get" action="{{ url_for('posts') }}" class="form-inline mb-4">
     <input
       type="text"

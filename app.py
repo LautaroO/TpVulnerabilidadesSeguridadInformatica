@@ -43,15 +43,19 @@ def posts():
     filter_text = request.args.get('filter', '')
     conn = get_db_connection()
     
-    if filter_text:
-        # Esta es una forma insegura de ejecutar la consulta, solo para propósitos educativos o de prueba
-        posts = conn.execute('SELECT * FROM posts WHERE content LIKE \'%' + filter_text + '%\'').fetchall()
-    else:
-        posts = conn.execute('SELECT * FROM posts').fetchall()
+    try:
+        if filter_text:
+            # Esta es una forma insegura de ejecutar la consulta, solo para propósitos educativos o de prueba
+            posts = conn.execute('SELECT * FROM posts WHERE content LIKE \'%' + filter_text + '%\'').fetchall()
+        else:
+            posts = conn.execute('SELECT * FROM posts').fetchall()
+        
+        conn.close()
+        return render_template('posts.html', posts=posts, error=None)
     
-    conn.close()
-
-    return render_template('posts.html', posts=posts)
+    except Exception as e:
+        error_message = str(e)
+        return render_template('posts.html', posts=[], error=error_message)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
