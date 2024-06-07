@@ -4,6 +4,7 @@ import sqlite3
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
+app.config['DEBUG'] = True
 
 # Database connection
 def get_db_connection():
@@ -24,10 +25,33 @@ def init_db():
 
 @app.route('/')
 def index():
+    if 'role' not in session or session['role'] != 'admin':
+        role = 'guest';
+    else :
+        role = 'admin';
+        
+    return render_template('index.html',role=role)
+
+@app.route('/posts')
+def posts():
+    role = request.args.get('role', 'guest')
+    
+    # If the role parameter is not 'guest' or 'admin', redirect to the same route with 'role=guest'
+    if role not in ['guest', 'admin']:
+        return redirect(url_for('posts', role='guest'))
+    
+    filter_text = request.args.get('filter', '')
     conn = get_db_connection()
-    posts = conn.execute('SELECT * FROM posts').fetchall()
+    
+    if filter_text:
+        # Esta es una forma insegura de ejecutar la consulta, solo para propósitos educativos o de prueba
+        posts = conn.execute('SELECT * FROM posts WHERE content LIKE \'%' + filter_text + '%\'').fetchall()
+    else:
+        posts = conn.execute('SELECT * FROM posts').fetchall()
+    
     conn.close()
-    return render_template('index.html', posts=posts)
+
+    return render_template('posts.html', posts=posts)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -53,6 +77,8 @@ def logout():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
+    role = request.args.get('role')
+    
     if 'user_id' not in session or session['role'] != 'admin':
         return redirect(url_for('index'))
     
