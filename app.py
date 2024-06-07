@@ -1,102 +1,79 @@
-from flask import Flask, request, jsonify, render_template, url_for, redirect
+import os
+from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
-from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'
 
+# Database connection
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# Initialize database
 def init_db():
-    conn = sqlite3.connect('example.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            password TEXT NOT NULL,
-            email TEXT NOT NULL,
-            role TEXT NOT NULL
-        )
-    ''')
-    c.execute('''
-        INSERT INTO users (username, password, email, role)
-        VALUES ('admin', 'adminpass', 'admin@example.com', 'admin')
-    ''')
+    conn = get_db_connection()
+    conn.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, email TEXT, password TEXT, role TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, title TEXT, content TEXT)')
+    conn.execute('INSERT OR IGNORE INTO users (id,username,email,password,role) VALUES (?,?,?,?,?)',
+                 (1,'admin','admin@admin.com','admin','admin')
+                 );
     conn.commit()
     conn.close()
 
-init_db()
-
 @app.route('/')
-def home():
-    return render_template('home.html')
+def index():
+    conn = get_db_connection()
+    posts = conn.execute('SELECT * FROM posts').fetchall()
+    conn.close()
+    return render_template('index.html', posts=posts)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-
-        conn = sqlite3.connect('example.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE username = ?", (username,))
-        user = c.fetchone()
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
         conn.close()
+        if user:
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['role'] = user['role']
+            return redirect(url_for('index'))
+    return render_template('login.html')
 
-        if user and check_password_hash(user[2], password):
-            session['user_id'] = user[0]
-            session['username'] = user[1]
-            flash('Login successful!', 'success')
-            return redirect(url_for('profile', username=username))
-        else:
-            flash('Invalid username or password', 'danger')
 
-    return render_template('sign-in.html')
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
 
-@app.route('/user')
-def get_user():
-    username = request.args.get('username')
-    conn = sqlite3.connect('example.db')
-    c = conn.cursor()
 
-    c.execute("SELECT * FROM users WHERE username = ?", (username,))
-    user = c.fetchone()
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+        conn = get_db_connection()
+        conn.execute('INSERT INTO posts (title, content) VALUES (?, ?)', (title, content))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('index'))
+    
+    return render_template('admin.html')
+
+@app.route('/post/<int:post_id>')
+def post(post_id):
+    conn = get_db_connection()
+    post = conn.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
     conn.close()
-
-    if user:
-        user_data = {'id': user[0], 'username': user[1], 'email': user[3], 'role': user[4]}
-        return jsonify(user_data)
-    else:
-        return jsonify({'error': 'User not found'}), 404
-
-@app.route('/profile')
-def profile():
-    username = request.args.get('username')
-    message = request.args.get('message', '')
-    conn = sqlite3.connect('example.db')
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM users WHERE username = ?", (username,))
-    user = c.fetchone()
-    conn.close()
-
-    if user:
-        user_data = {'username': user[1], 'email': user[3], 'role': user[4]}
-        return render_template('user_profile.html', user=user_data, message=message)
-    else:
-        return jsonify({'error': 'User not found'}), 404
-
-@app.route('/reset_password', methods=['POST'])
-def reset_password():
-    email = request.form.get('email')
-    conn = sqlite3.connect('example.db')
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM users WHERE email = ?", (email,))
-    user = c.fetchone()
-
-    if user:
-        return jsonify({'message': f'Recovery email sent to {email}'}), 200
-    else:
-        return jsonify({'error': 'Email not found'}), 404
+    return render_template('post.html', post=post)
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
