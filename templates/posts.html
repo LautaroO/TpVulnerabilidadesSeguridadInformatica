@@ -1,0 +1,28 @@
+{% extends "base.html" %} {% block title %}Blog - Home{% endblock %} {% block
+content %}
+<h1>Blog Posts</h1>
+<div class="list-group">
+  {% if error %}
+  <div class="alert alert-danger" role="alert">Error: {{ error }}</div>
+  {% endif %} {% if request.args.get('role') == 'admin' %}
+  <form method="get" action="{{ url_for('posts') }}" class="form-inline mb-4">
+    <input
+      type="text"
+      name="filter"
+      class="form-control mr-2"
+      placeholder="Filter by content"
+      value="{{ request.args.get('filter', '') }}"
+    />
+    <button type="submit" class="btn btn-primary">Filter</button>
+  </form>
+  {% endif %} {% for post in posts %}
+  <a
+    href="{{ url_for('post', post_id=post['id']) }}"
+    class="list-group-item list-group-item-action"
+  >
+    <h5 class="mb-1">{{ post['title'] }}</h5>
+    <p class="mb-1">{{ post['content'] }}</p>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

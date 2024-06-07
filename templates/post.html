@@ -1,0 +1,21 @@
+{% extends "base.html" %} {% block title %}{{ post['title'] }}{% endblock %} {%
+block content %}
+<h1>{{ post['title'] }}</h1>
+<p>{{ post['content']|safe }}</p>
+<!-- El uso de |safe permite la ejecución de HTML sin escapar -->
+<form method="post">
+  <div class="form-group">
+    <label for="comment">Comment:</label>
+    <input
+      type="text"
+      class="form-control"
+      id="comment"
+      name="comment"
+      required
+    />
+  </div>
+  <button type="submit" class="btn btn-primary">Comment</button>
+</form>
+<a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">Back to Blog</a>
+<a href="{{ url_for('logout') }}" class="btn btn-danger mt-3">Logout</a>
+{% endblock %}
