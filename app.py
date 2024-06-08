@@ -1,6 +1,10 @@
-import os
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
+import smtplib
+import uuid
+import yaml
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -104,6 +108,73 @@ def post(post_id):
     conn.close()
     return render_template('post.html', post=post)
 
+# Password recovery
+def send_recovery_email(emailTo, token):
+    try:
+        # Get configs
+        with open('config/config.yaml', 'r') as file:
+            configuration = yaml.safe_load(file)
+
+        emailFrom = configuration['email']['sender']
+        password = configuration['email']['password']
+        subject = configuration['email']['subject']
+        message = configuration['email']['message']
+        server = configuration['email']['server']
+        port = configuration['email']['port']
+
+        # Message build
+        msg = MIMEMultipart()
+        msg['From'] = emailFrom
+        msg['To'] = emailTo
+        msg['Subject'] = subject
+
+        # Add body message
+        msg.attach(MIMEText(message + token , 'plain'))
+
+        # Gmail SMPT server configuration
+        server = smtplib.SMTP(server, port)
+        server.starttls()  # Safe connection with SMPT server.
+        server.login(emailFrom, password)
+        text = msg.as_string()
+        server.sendmail(emailFrom, emailTo, text)  # Sending email
+        server.quit()  # Close connection
+
+
+        return "Correo enviado exitosamente."
+    except Exception as e:
+        return f"Error al enviar correo: {e}"
+
+@app.route('/recover_password', methods=['GET', 'POST'])
+def recover_password():
+    if request.method == 'POST':
+        userName = request.form['user']
+        conn = get_db_connection()
+        userEmail = conn.execute('SELECT email FROM users WHERE username = ?', (userName,)).fetchone()[0]
+        if userEmail:
+            token = str(uuid.uuid4())
+            conn.execute('UPDATE users SET recovery_token = ? WHERE email = ?', (token, userEmail))
+            conn.commit()
+            conn.close()
+            send_recovery_email(userEmail, token)
+            flash('Recovery email sent! Please check your inbox.')
+            return redirect(url_for('login'))
+        flash('Email not found!')
+        conn.close()
+    return render_template('recover_password.html')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if request.method == 'POST':
+        password = request.form['password']
+        conn = get_db_connection()
+        conn.execute('UPDATE users SET password = ?, recovery_token = NULL WHERE recovery_token = ?', (password, token))
+        conn.commit()
+        conn.close()
+        flash('Password updated successfully!')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', token=token)
+
+# Main
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)

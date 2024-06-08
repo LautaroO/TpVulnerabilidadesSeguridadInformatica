@@ -1,0 +1,7 @@
+email:
+  sender: seguridadutn.tp@gmail.com
+  password: gjjd hcvx etxv wabe
+  port: 587
+  server: smtp.gmail.com
+  subject: Recuperación de contraseña
+  message: Reinicia tu contraseña ingresando al siguiente link http://127.0.0.1:5000/reset_password/
