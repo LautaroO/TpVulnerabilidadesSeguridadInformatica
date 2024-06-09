@@ -5,6 +5,8 @@ body {
     background-color: #f4f4f4;
 }
 
+
+
 header {
     background-color: #333;
     color: #fff;
@@ -24,4 +26,11 @@ footer {
     position: fixed;
     bottom: 0;
     width: 100%;
+}
+
+.thumbnail-bg {
+    background-image: url('../img/logo.jpg'); /* Cambia esta ruta a la ubicación de tu imagen */
+    background-size: cover; /* Asegura que la imagen cubra todo el contenedor */
+    background-position: center; /* Centra la imagen */
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
 }
