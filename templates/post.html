@@ -3,6 +3,12 @@ block content %}
 <h1>{{ post['title'] }}</h1>
 <p>{{ post['content']|safe }}</p>
 <!-- El uso de |safe permite la ejecución de HTML sin escapar -->
+<h3 class="mt-10">COMENTARIOS</h3>
+{% for comment in comments %}
+<a class="list-group-item list-group-item-action" >
+    <h4 class="mb-1">{{ comment['content'] }}</h4>
+</a>
+{% endfor %}
 <form method="post">
   <div class="form-group">
     <label for="comment">Comment:</label>

