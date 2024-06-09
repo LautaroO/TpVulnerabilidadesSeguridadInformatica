@@ -3,12 +3,14 @@ import sqlite3
 import smtplib
 import uuid
 import yaml
+from flask_bcrypt import Bcrypt
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 app.config['DEBUG'] = True
+bcrypt = Bcrypt(app) 
 
 # Database connection
 def get_db_connection():
@@ -22,8 +24,7 @@ def init_db():
     conn.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, email TEXT, password TEXT, role TEXT)')
     conn.execute('CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, title TEXT, content TEXT)')
     conn.execute('INSERT OR IGNORE INTO users (id,username,email,password,role) VALUES (?,?,?,?,?)',
-                 (1,'admin','admin@admin.com','admin','admin')
-                 );
+                 (1,'admin','admin@admin.com',bcrypt.generate_password_hash('admin').decode('utf-8'),'admin'))
     conn.commit()
     conn.close()
 
@@ -67,13 +68,14 @@ def login():
         username = request.form['username']
         password = request.form['password']
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
         conn.close()
         if user:
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['role'] = user['role']
-            return redirect(url_for('index'))
+            if bcrypt.check_password_hash(user["password"],password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['role'] = user['role']
+                return redirect(url_for('index'))
     return render_template('login.html')
 
 
@@ -165,7 +167,7 @@ def recover_password():
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     if request.method == 'POST':
-        password = request.form['password']
+        password = bcrypt.generate_password_hash(request.form['password']).decode('utf-8')
         conn = get_db_connection()
         conn.execute('UPDATE users SET password = ?, recovery_token = NULL WHERE recovery_token = ?', (password, token))
         conn.commit()
