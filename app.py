@@ -3,12 +3,15 @@ import sqlite3
 import smtplib
 import uuid
 import yaml
+import os
+from flask_bcrypt import Bcrypt
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 app.config["DEBUG"] = True
+bcrypt = Bcrypt(app)
 
 
 # Database connection
@@ -18,13 +21,21 @@ def get_db_connection():
     return conn
 
 
+def cleanDB():
+    if os.path.exists("database.db"):
+        os.remove("database.db")
+
+
 # Initialize database
 def init_db():
+    cleanDB()
+
     conn = get_db_connection()
+
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT, email TEXT,
             password TEXT, role TEXT
         )
@@ -33,7 +44,7 @@ def init_db():
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS posts (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             content TEXT
         )
@@ -42,11 +53,9 @@ def init_db():
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS comments (
-            id INTEGER PRIMARY KEY,
-            user_id INTEGER,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,
             post_id INTEGER NOT NULL,
-            FOREIGN KEY(user_id) REFERENCES users(id)
             FOREIGN KEY(post_id) REFERENCES posts(id)
         )
     """
@@ -54,14 +63,58 @@ def init_db():
     conn.execute(
         """
         INSERT OR IGNORE INTO users (
-            id,
             username,
             email,
             password,
             role)
-        VALUES (?,?,?,?,?)
+        VALUES (?,?,?,?)
     """,
-        (1, "admin", "admin@admin.com", "admin", "admin"),
+        (
+            "admin",
+            "admin@admin.com",
+            bcrypt.generate_password_hash("admin").decode("utf-8"),
+            "admin",
+        ),
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO users (
+            username,
+            email,
+            password,
+            role)
+        VALUES (?,?,?,?)
+    """,
+        (
+            "user1",
+            "user@admin.com",
+            bcrypt.generate_password_hash("123456").decode("utf-8"),
+            "premium",
+        ),
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO users (
+            username,
+            email,
+            password,
+            role)
+        VALUES (?,?,?,?)
+    """,
+        (
+            "guest",
+            "user@admin.com",
+            bcrypt.generate_password_hash("123456").decode("utf-8"),
+            "guest",
+        ),
+    )
+
+    conn.execute(
+        """
+        INSERT INTO posts (title, content)
+        VALUES(?, ?)
+    """,
+        ("Bienvenido al blog!", "Pronto estare subiendo más contenido!"),
     )
     conn.commit()
     conn.close()
@@ -112,15 +165,16 @@ def login():
         password = request.form["password"]
         conn = get_db_connection()
         user = conn.execute(
-            "SELECT * FROM users WHERE username = ? AND password = ?",
-            (username, password),
+            "SELECT * FROM users WHERE username = ?", (username,)
         ).fetchone()
         conn.close()
         if user:
-            session["user_id"] = user["id"]
-            session["username"] = user["username"]
-            session["role"] = user["role"]
-            return redirect(url_for("index"))
+            if bcrypt.check_password_hash(user["password"], password):
+                session["user_id"] = user["id"]
+                # session["user_id"] = encriptarBase64(username, rol)
+                session["username"] = user["username"]
+                session["role"] = user["role"]
+                return redirect(url_for("index"))
     return render_template("login.html")
 
 
@@ -130,10 +184,17 @@ def logout():
     return redirect(url_for("index"))
 
 
-@app.route("/post/<int:post_id>/comments", methods=["POST"])
+@app.route("/post/<int:post_id>", methods=["POST"])
 def commentPost(post_id):
-    # print(request)
-    return "hi"
+    conn = get_db_connection()
+    content = request.form["comment"]
+    query = f"""
+        INSERT INTO comments (post_id, content)
+        VALUES({post_id}, '{content}')
+    """
+    post = conn.executescript(query)
+    conn.close()
+    return render_template("post.html", post=post)
 
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -157,12 +218,15 @@ def admin():
     return render_template("admin.html")
 
 
-@app.route("/post/<int:post_id>")
+@app.route("/post/<int:post_id>", methods=["GET"])
 def post(post_id):
     conn = get_db_connection()
-    post = conn.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
+    post = conn.execute(f"""SELECT * FROM posts WHERE id = {post_id};""").fetchone()
+    comments = conn.execute(
+        f"""SELECT * FROM comments WHERE post_id = {post_id};"""
+    ).fetchall()
     conn.close()
-    return render_template("post.html", post=post)
+    return render_template("post.html", post=post, comments=comments)
 
 
 # Password recovery
@@ -228,7 +292,9 @@ def recover_password():
 @app.route("/reset_password/<token>", methods=["GET", "POST"])
 def reset_password(token):
     if request.method == "POST":
-        password = request.form["password"]
+        password = bcrypt.generate_password_hash(request.form["password"]).decode(
+            "utf-8"
+        )
         conn = get_db_connection()
         conn.execute(
             "UPDATE users SET password = ?, recovery_token = NULL WHERE recovery_token = ?",
