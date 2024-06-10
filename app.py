@@ -56,6 +56,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,
             post_id INTEGER NOT NULL,
+            username TEXT NULL,
             FOREIGN KEY(post_id) REFERENCES posts(id)
         )
     """
@@ -188,9 +189,10 @@ def logout():
 def commentPost(post_id):
     conn = get_db_connection()
     content = request.form["comment"]
+    username = session.get("username","Anónimo")
     query = f"""
-        INSERT INTO comments (post_id, content)
-        VALUES({post_id}, '{content}')
+        INSERT INTO comments (post_id, content, username)
+        VALUES({post_id}, '{content}', '{username}')
     """
     post = conn.executescript(query)
     conn.close()

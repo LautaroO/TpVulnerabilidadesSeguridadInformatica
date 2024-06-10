@@ -1,27 +1,40 @@
 {% extends "base.html" %} {% block title %}{{ post['title'] }}{% endblock %} {%
 block content %}
-<h1>{{ post['title'] }}</h1>
-<p>{{ post['content']|safe }}</p>
-<!-- El uso de |safe permite la ejecución de HTML sin escapar -->
-<h3 class="mt-10">COMENTARIOS</h3>
-{% for comment in comments %}
-<a class="list-group-item list-group-item-action" >
-    <h4 class="mb-1">{{ comment['content'] }}</h4>
-</a>
-{% endfor %}
+<div class="col-md-8">
+  <article class="blog-post">
+    <h2 class="display-5 link-body-emphasis mb-1">{{ post['title'] }}</h2>
+    <p class="blog-post-meta">Agosto 1, 2021</p>
+
+    <p>{{ post['content']|safe }}</p>
+  </article>
+</div>
+
+<hr>
 <form method="post">
   <div class="form-group">
-    <label for="comment">Comment:</label>
+    <label for="comment">Dejá tu comentario:</label>
     <input
-      type="text"
-      class="form-control"
-      id="comment"
-      name="comment"
-      required
+            type="text"
+            class="form-control"
+            id="comment"
+            name="comment"
+            required
     />
   </div>
-  <button type="submit" class="btn btn-primary">Comment</button>
+  <button type="submit" class="btn btn-secondary btn-sm">Comentar</button>
 </form>
-<a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">Back to Blog</a>
-<a href="{{ url_for('logout') }}" class="btn btn-danger mt-3">Logout</a>
+<div class="my-3 p-3 bg-body rounded shadow-sm">
+  <h6 class="border-bottom pb-2 mb-0">Comentarios</h6>
+{% for comment in comments %}
+  <div class="d-flex text-body-secondary pt-3">
+    <p class="pb-3 mb-0 small lh-sm border-bottom">
+      <strong class="d-block text-gray-dark">{{ comment['username'] }}</strong>
+      {{ comment['content'] }}
+    </p>
+  </div>
+  {% endfor %}
+  <small class="d-block text-end mt-3">
+    <a href="/">Volver al home</a>
+  </small>
+</div>
 {% endblock %}
