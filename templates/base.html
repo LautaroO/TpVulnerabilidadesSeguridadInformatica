@@ -42,11 +42,11 @@
                         <path d="M21 21l-5.2-5.2"/>
                     </svg>
                 </a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('posts') }}?role={{ role }}">Posts</a>
                 {% if 'username' in session %}
                 {% if session.get('role') == 'admin' %}
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin') }}">Admin panel</a>
                 {% endif %}
-                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('posts') }}?role={{ role }}">Posts</a>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('login') }}">Login</a>
