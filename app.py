@@ -41,8 +41,8 @@ def init_db():
             username TEXT,
             email TEXT,
             password TEXT,
-            recovery_token TEXT,
-            role TEXT
+            role TEXT,
+            recovery_token TEXT
         )
     """
     )
@@ -233,10 +233,15 @@ def logout():
 def commentPost(post_id):
     conn = get_db_connection()
     content = request.form["comment"]
-    username = session.get("username", "Anónimo")
+    username = (
+        session.get("username")
+        if (session.get("username") and session.get("username").strip())
+        else "Anónimo"
+    )
+    print(username)
     query = f"""
         INSERT INTO comments (post_id, content, username)
-        VALUES({post_id}, '{content}', '{username}')
+        VALUES({post_id}, '{username}', '{content}')
     """
     post = conn.executescript(query)
     conn.close()
