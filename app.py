@@ -37,7 +37,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT, email TEXT,
-            password TEXT, role TEXT
+            password TEXT, role TEXT,
+            recovery_token TEXT
         )
     """
     )
@@ -195,7 +196,6 @@ def commentPost(post_id):
         INSERT INTO comments (post_id, content, username)
         VALUES({post_id}, '{username}', '{content}')
     """
-    print(query)
     post = conn.executescript(query)
     conn.close()
     return render_template("post.html", post=post)
