@@ -45,7 +45,7 @@ Run: py app.py
    - ' UNION ALL SELECT id, title, content FROM 'posts' --
    - ' UNION ALL SELECT id, content, post_id FROM 'comments' --
 
-   #### En el mismo campo, intentamos buscar la forma de cambiar el mail, pero no nos permite, ya que se ejecuta solo una consulta a la vez
+   #### En el mismo campo, intentamos buscar la forma de cambiar el mail, pero no nos permite, ya que no permite la ejecucion de mas de una query a la vez
    - s' ; UPDATE users SET email='my_email' WHERE username='admin'; --
 
    #### Buscamos otros campos donde poder injectar sql. Encontramos que los posts tienen un campo texto, que permite esta injeccion
