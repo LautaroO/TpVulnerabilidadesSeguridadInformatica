@@ -38,8 +38,11 @@ def init_db():
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT, email TEXT,
-            password TEXT, role TEXT
+            username TEXT,
+            email TEXT,
+            password TEXT,
+            recovery_token TEXT,
+            role TEXT
         )
     """
     )
@@ -261,13 +264,17 @@ def admin():
 
 @app.route("/post/<int:post_id>", methods=["GET"])
 def post(post_id):
-    conn = get_db_connection()
-    post = conn.execute(f"""SELECT * FROM posts WHERE id = {post_id};""").fetchone()
-    comments = conn.execute(
-        f"""SELECT * FROM comments WHERE post_id = {post_id};"""
-    ).fetchall()
-    conn.close()
-    return render_template("post.html", post=post, comments=comments)
+    try:
+        conn = get_db_connection()
+        post = conn.execute(f"""SELECT * FROM posts WHERE id = {post_id};""").fetchone()
+        comments = conn.execute(
+            f"""SELECT * FROM comments WHERE post_id = {post_id};"""
+        ).fetchall()
+        conn.close()
+        return render_template("post.html", post=post, comments=comments)
+    except Exception as e:
+        error_message = str(e)
+        return render_template("posts.html", posts=[], error=error_message)
 
 
 # Password recovery

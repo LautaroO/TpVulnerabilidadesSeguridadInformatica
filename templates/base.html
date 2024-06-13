@@ -44,7 +44,7 @@
                 </a>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('posts') }}?role={{ role }}">Posts</a>
                 {% if 'username' in session %}
-                    {% if 'role' in session and decode(session['role']) == 'admin' %}
+                    {% if 'role' in session and session.get('role') == 'admin' %}
                         <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin') }}">Admin panel</a>
                     {% endif %}
                     <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logout') }}">Logout</a>
