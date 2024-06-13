@@ -114,6 +114,22 @@ def init_db():
             "guest",
         ),
     )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO users (
+            username,
+            email,
+            password,
+            role)
+        VALUES (?,?,?,?)
+    """,
+        (
+            "usuario",
+            "user@admin.com",
+            bcrypt.generate_password_hash("123456").decode("utf-8"),
+            "guest",
+        ),
+    )
 
     conn.execute(
         """
@@ -231,21 +247,26 @@ def logout():
 
 @app.route("/post/<int:post_id>", methods=["POST"])
 def commentPost(post_id):
-    conn = get_db_connection()
-    content = request.form["comment"]
-    username = (
-        session.get("username")
-        if (session.get("username") and session.get("username").strip())
-        else "Anónimo"
-    )
-    print(username)
-    query = f"""
-        INSERT INTO comments (post_id, content, username)
-        VALUES({post_id}, '{username}', '{content}')
-    """
-    post = conn.executescript(query)
-    conn.close()
-    return render_template("post.html", post=post)
+    try:
+        conn = get_db_connection()
+        content = request.form["comment"]
+        username = (
+            session.get("username")
+            if (session.get("username") and session.get("username").strip())
+            else "Anónimo"
+        )
+        print(username)
+        query = f"""
+            INSERT INTO comments (post_id, content, username)
+            VALUES({post_id}, '{username}', '{content}')
+        """
+        post = conn.executescript(query)
+        conn.close()
+        return render_template("post.html", post=post)
+
+    except Exception as e:
+        post = {"title": "", "content": ""}
+        return render_template("post.html", post=post, error=str(e))
 
 
 @app.route("/admin", methods=["GET", "POST"])

@@ -12,7 +12,8 @@ content %}
 <div class="list-group" style="align-items: center">
     {% if error %}
     <div class="alert alert-danger" role="alert">Error: {{ error }}</div>
-    {% endif %} {% if decode(role) == 'admin' %}
+    {% endif %} 
+    {% if 'role' in session and session.get('role') == 'admin' %}
     <form method="get" action="{{ url_for('posts') }}" class="form-inline mb-4">
         <input
                 type="text"
