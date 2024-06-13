@@ -13,7 +13,6 @@ block content %}
 </div>
 
 <hr>
-{% if 'role' in session %}
 <form method="post">
   <div class="form-group">
     <label for="comment">Dejá tu comentario:</label>
@@ -27,7 +26,6 @@ block content %}
   </div>
   <button type="submit" class="btn btn-secondary btn-sm">Comentar</button>
 </form>
-{% endif %}
 <div class="my-3 p-3 bg-body rounded shadow-sm">
   <h6 class="border-bottom pb-2 mb-0">Comentarios</h6>
 {% for comment in comments %}
