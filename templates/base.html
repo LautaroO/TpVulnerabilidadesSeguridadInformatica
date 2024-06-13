@@ -44,10 +44,10 @@
                 </a>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('posts') }}?role={{ role }}">Posts</a>
                 {% if 'username' in session %}
-                {% if session.get('role') == 'admin' %}
-                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin') }}">Admin panel</a>
-                {% endif %}
-                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logout') }}">Logout</a>
+                    {% if 'role' in session and decode(session['role']) == 'admin' %}
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin') }}">Admin panel</a>
+                    {% endif %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('login') }}">Login</a>
                 {% endif %}

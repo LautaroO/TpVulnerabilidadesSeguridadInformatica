@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
+import binascii
 import smtplib
 import uuid
 import yaml
@@ -7,6 +8,7 @@ import os
 from flask_bcrypt import Bcrypt
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import base64
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -121,27 +123,63 @@ def init_db():
     conn.close()
 
 
+def decodeTextFromBase64(base64Text):
+    if not isinstance(base64Text, str):
+        return encodeTextInBase64("guest")
+
+    try:
+        decoded_text = base64.b64decode(base64Text).decode("utf-8")
+        return decoded_text
+    except (binascii.Error, ValueError, TypeError):
+        return None  # En caso de error, devuelve None
+
+
+def encodeTextInBase64(text):
+    try:
+        if not text:
+            raise ValueError("Input text is empty")
+        encoded_text = base64.b64encode(text.encode("utf-8")).decode("utf-8")
+        base64.b64decode(encoded_text).decode("utf-8")
+        return encoded_text
+    except (TypeError, ValueError, base64.binascii.Error) as e:
+        print(f"UN ERROR: {e}")
+        return getCurrentSession()
+
+
+def getCurrentSession():
+    if "role" not in session or session["role"] != "admin":
+        return "guest"
+    else:
+        return "admin"
+
+
+@app.context_processor
+def utility_processorrs():
+    return dict(encode=encodeTextInBase64, decode=decodeTextFromBase64)
+
+
 @app.route("/")
 def index():
-    if "role" not in session or session["role"] != "admin":
-        role = "guest"
-    else:
-        role = "admin"
-
-    return render_template("index.html", role=role)
+    role = getCurrentSession()
+    encoded_role = encodeTextInBase64(role)
+    return render_template("index.html", role=encoded_role)
 
 
 @app.route("/posts")
 def posts():
-    role = request.args.get("role", "guest")
+    role = request.args.get("role")
 
+    if role is None:
+        decodedRole = "guest"
+    else:
+        decodedRole = decodeTextFromBase64(role)
+        if decodedRole is None:
+            decodedRole = "guest"
     # If the role parameter is not 'guest' or 'admin', redirect to the same route with 'role=guest'
-    if role not in ["guest", "admin"]:
-        return redirect(url_for("posts", role="guest"))
-
+    if decodedRole not in ["guest", "admin"]:
+        return redirect(url_for("posts", role=encodeTextInBase64("guest")))
     filter_text = request.args.get("filter", "")
     conn = get_db_connection()
-
     try:
         if filter_text:
             # Esta es una forma insegura de ejecutar la consulta, solo para propósitos educativos o de prueba
@@ -150,10 +188,13 @@ def posts():
             ).fetchall()
         else:
             posts = conn.execute("SELECT * FROM posts").fetchall()
-
         conn.close()
-        return render_template("posts.html", posts=posts, error=None)
-
+        return render_template(
+            "posts.html",
+            role=role,
+            posts=posts,
+            error=None,
+        )
     except Exception as e:
         error_message = str(e)
         return render_template("posts.html", posts=[], error=error_message)
@@ -189,7 +230,7 @@ def logout():
 def commentPost(post_id):
     conn = get_db_connection()
     content = request.form["comment"]
-    username = session.get("username","Anónimo")
+    username = session.get("username", "Anónimo")
     query = f"""
         INSERT INTO comments (post_id, content, username)
         VALUES({post_id}, '{content}', '{username}')
@@ -201,9 +242,7 @@ def commentPost(post_id):
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
-    role = request.args.get("role")
-
-    if "user_id" not in session or session["role"] != "admin":
+    if "user_id" not in session or "role" not in session or session["role"] != "admin":
         return redirect(url_for("index"))
 
     if request.method == "POST":
@@ -312,4 +351,7 @@ def reset_password(token):
 # Main
 if __name__ == "__main__":
     init_db()
+    text = "admin"
+    print(encodeTextInBase64(text))
+    print(decodeTextFromBase64(encodeTextInBase64(text)))
     app.run(debug=True)
